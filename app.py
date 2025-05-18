@@ -6,24 +6,20 @@ import mysql.connector
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-# Specific CORS configuration for cross-domain cookies
+# More permissive CORS configuration for troubleshooting
 CORS(app, 
      supports_credentials=True, 
-     origins=[
-         "https://heritage-frontend.onrender.com",
-         "https://heritage-frontend-yf3u.onrender.com",
-         "http://localhost:8000",
-         "http://127.0.0.1:8000"
-     ],
-     allow_headers=["Content-Type", "Authorization"],
-     methods=["GET", "POST", "OPTIONS"])
+     origins=["*"],  # Allow all origins for troubleshooting
+     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     expose_headers=["Content-Type", "Authorization"])
 app.secret_key = 'your_secret_key_here'  # Change to a strong, random key in production
 
 # Configure session to work better across domains
 app.config.update(
-    SESSION_COOKIE_SECURE=True,  # Only send cookies over HTTPS
+    SESSION_COOKIE_SECURE=False,  # Allow cookies over HTTP for testing
     SESSION_COOKIE_HTTPONLY=True,  # Prevent JavaScript access to cookies
-    SESSION_COOKIE_SAMESITE='None',  # Allow cross-domain cookies
+    SESSION_COOKIE_SAMESITE=None,  # Allow cross-domain cookies
     PERMANENT_SESSION_LIFETIME=86400  # Session lasts for 1 day (in seconds)
 )
 
