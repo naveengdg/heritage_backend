@@ -28,20 +28,31 @@ LANG_MAP = {
 # Helper function to get a MySQL database connection
 def get_db_connection():
     try:
-        # PlanetScale requires SSL and specific connection parameters
+        # Get database credentials from environment variables
+        db_host = os.environ.get('DB_HOST', 'localhost')
+        db_user = os.environ.get('DB_USER', 'avnadmin')
+        db_password = os.environ.get('DB_PASSWORD', '')
+        db_name = os.environ.get('DB_NAME', 'defaultdb')
+        db_port = int(os.environ.get('DB_PORT', '26016'))  # Convert to integer and use Aiven's default port
+        
+        # Log connection attempt (without password)
+        app.logger.info(f"Attempting to connect to MySQL at {db_host}:{db_port} as {db_user}")
+        
+        # Aiven MySQL connection parameters
         return mysql.connector.connect(
-            host=os.environ.get('DB_HOST', 'localhost'),
-            user=os.environ.get('DB_USER', 'root'),
-            password=os.environ.get('DB_PASSWORD', '220701183'),
-            database=os.environ.get('DB_NAME', 'heritage_explorer'),
-            ssl_disabled=False,  # PlanetScale requires SSL
-            ssl_verify_cert=False,  # PlanetScale doesn't use standard SSL verification
+            host=db_host,
+            user=db_user,
+            password=db_password,
+            database=db_name,
+            port=db_port,
+            ssl_disabled=False,  # Aiven requires SSL
+            ssl_verify_cert=False,  # Aiven doesn't use standard SSL verification
             ssl_verify_identity=False,
             ssl_ca=None,
             ssl_cert=None,
             ssl_key=None,
             use_pure=True,  # Use pure Python implementation for better compatibility
-            connect_timeout=10  # Set timeout in seconds
+            connect_timeout=15  # Increase timeout for slow connections
         )
     except Exception as e:
         app.logger.error(f"Database connection error: {str(e)}")
