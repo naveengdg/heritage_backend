@@ -47,8 +47,7 @@ def get_db_connection():
         app.logger.error(f"Database connection error: {str(e)}")
         raise
 
-# Initialize database tables on startup
-@app.before_first_request
+# Initialize database tables
 def initialize_database():
     try:
         conn = get_db_connection()
@@ -57,7 +56,7 @@ def initialize_database():
         # Read and execute SQL schema
         with open('schema.sql', 'r') as f:
             sql = f.read()
-            # Split SQL statements for PlanetScale compatibility
+            # Split SQL statements for compatibility
             statements = sql.split(';')
             for statement in statements:
                 if statement.strip():
@@ -66,9 +65,19 @@ def initialize_database():
         conn.commit()
         cursor.close()
         app.logger.info("Database initialized successfully")
+        return True
     except Exception as e:
         app.logger.error(f"Database initialization error: {str(e)}")
-        raise
+        return False
+
+# Route to initialize database
+@app.route('/init-db', methods=['GET'])
+def init_db_route():
+    success = initialize_database()
+    if success:
+        return jsonify({'message': 'Database initialized successfully'})
+    else:
+        return jsonify({'error': 'Failed to initialize database'}), 500
 
 @app.route('/ask', methods=['POST'])
 def ask():
@@ -207,5 +216,13 @@ def contact_message():
     except Exception as e:
         return jsonify({'error': 'Failed to save your message.'}), 500
 
+# Initialize database on startup
+with app.app_context():
+    try:
+        initialize_database()
+        app.logger.info("Database initialized on startup")
+    except Exception as e:
+        app.logger.error(f"Failed to initialize database on startup: {str(e)}")
+
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(debug=True)
