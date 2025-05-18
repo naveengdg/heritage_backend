@@ -6,7 +6,7 @@ import mysql.connector
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, origins=["http://localhost:8000"])
+CORS(app, supports_credentials=True, origins=["*"])  # Allow all origins in production
 app.secret_key = 'your_secret_key_here'  # Change to a strong, random key in production
 
 # Get Gemini API key from environment variable
@@ -27,12 +27,35 @@ LANG_MAP = {
 
 # Helper function to get a MySQL database connection
 def get_db_connection():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",  # Change to 'heritage_user' if you created that user
-        password="220701183",  # <-- Replace with your MySQL password
-        database="heritage_explorer"
-    )
+    try:
+        return mysql.connector.connect(
+            host=os.environ.get('DB_HOST', 'localhost'),
+            user=os.environ.get('DB_USER', 'root'),
+            password=os.environ.get('DB_PASSWORD', '220701183'),
+            database=os.environ.get('DB_NAME', 'heritage_explorer')
+        )
+    except Exception as e:
+        app.logger.error(f"Database connection error: {str(e)}")
+        raise
+
+# Initialize database tables on startup
+@app.before_first_request
+def initialize_database():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Read and execute SQL schema
+        with open('schema.sql', 'r') as f:
+            sql = f.read()
+            cursor.execute(sql, multi=True)
+            
+        conn.commit()
+        cursor.close()
+        app.logger.info("Database initialized successfully")
+    except Exception as e:
+        app.logger.error(f"Database initialization error: {str(e)}")
+        raise
 
 @app.route('/ask', methods=['POST'])
 def ask():
