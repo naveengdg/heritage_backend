@@ -6,10 +6,15 @@ import mysql.connector
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-# More permissive CORS configuration for troubleshooting
+# Fix CORS for the specific frontend domain
+
+# Remove any existing CORS configuration
+if hasattr(app, '_cors_config'):
+    del app._cors_config
+
+# Apply new CORS configuration
 CORS(app, 
-     supports_credentials=True, 
-     origins=["*"],  # Allow all origins for troubleshooting
+     resources={r"/*": {"origins": ["https://frontend-heritage.onrender.com"], "supports_credentials": True}},
      allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
      expose_headers=["Content-Type", "Authorization"])
