@@ -6,8 +6,26 @@ import mysql.connector
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, origins=["*"])  # Allow all origins in production
+# Specific CORS configuration for cross-domain cookies
+CORS(app, 
+     supports_credentials=True, 
+     origins=[
+         "https://heritage-frontend.onrender.com",
+         "https://heritage-frontend-yf3u.onrender.com",
+         "http://localhost:8000",
+         "http://127.0.0.1:8000"
+     ],
+     allow_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "OPTIONS"])
 app.secret_key = 'your_secret_key_here'  # Change to a strong, random key in production
+
+# Configure session to work better across domains
+app.config.update(
+    SESSION_COOKIE_SECURE=True,  # Only send cookies over HTTPS
+    SESSION_COOKIE_HTTPONLY=True,  # Prevent JavaScript access to cookies
+    SESSION_COOKIE_SAMESITE='None',  # Allow cross-domain cookies
+    PERMANENT_SESSION_LIFETIME=86400  # Session lasts for 1 day (in seconds)
+)
 
 # Get Gemini API key from environment variable
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
@@ -194,7 +212,8 @@ def login():
     if not check_password_hash(password_hash, password):
         return jsonify({'error': 'Incorrect password.'}), 401
 
-    # Set session
+    # Set session and make it permanent
+    session.permanent = True  # Make session permanent
     session['user_id'] = user_id
     session['user_name'] = name
     session['user_email'] = email
