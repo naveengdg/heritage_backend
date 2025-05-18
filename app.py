@@ -25,6 +25,17 @@ LANG_MAP = {
     'ta': 'Tamil',
 }
 
+# Root route for basic testing
+@app.route('/')
+def root():
+    return jsonify({
+        'status': 'online',
+        'message': 'Heritage Explorer API is running',
+        'endpoints': [
+            '/register', '/login', '/ask', '/test-db', '/init-db', '/contact-message'
+        ]
+    })
+
 # Helper function to get a MySQL database connection
 def get_db_connection():
     try:
