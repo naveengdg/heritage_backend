@@ -213,29 +213,78 @@ def login():
     if not check_password_hash(password_hash, password):
         return jsonify({'error': 'Incorrect password.'}), 401
 
-    # Set session and make it permanent
-    session.permanent = True  # Make session permanent
-    session['user_id'] = user_id
-    session['user_name'] = name
-    session['user_email'] = email
+    # Instead of using session, return user data directly
+    # The frontend will store this in localStorage
+    user_data = {
+        'id': user_id,
+        'name': name,
+        'email': email,
+        'auth_token': f"{user_id}_{email}_{hash(name + str(user_id))}"
+    }
 
-    return jsonify({'message': 'Login successful!', 'user': {'id': user_id, 'name': name, 'email': email}})
+    return jsonify({
+        'message': 'Login successful!', 
+        'user': user_data,
+        'logged_in': True
+    })
 
 @app.route('/logout', methods=['POST'])
 def logout():
-    session.clear()
-    return jsonify({'message': 'Logged out'})
+    # With token-based auth, logout is handled client-side
+    # by removing the token from localStorage
+    # This endpoint just confirms the logout
+    return jsonify({
+        'message': 'Logged out successfully',
+        'logged_in': False
+    })
 
-@app.route('/session')
+@app.route('/session', methods=['GET', 'POST'])
 def check_session():
-    if 'user_id' in session:
-        return jsonify({'logged_in': True, 'user': {
-            'id': session['user_id'],
-            'name': session['user_name'],
-            'email': session['user_email']
-        }})
-    else:
-        return jsonify({'logged_in': False})
+    # Check for auth token in request headers or JSON body
+    auth_token = None
+    
+    # Check if token is in headers
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        auth_token = auth_header.split(' ')[1]
+    
+    # If not in headers, check if it's in JSON body
+    if not auth_token and request.method == 'POST' and request.is_json:
+        data = request.get_json()
+        auth_token = data.get('auth_token')
+    
+    # If we have a token, validate it (in a real app, you'd verify it properly)
+    if auth_token:
+        try:
+            # Simple validation - in production you'd use JWT or similar
+            parts = auth_token.split('_')
+            if len(parts) >= 2:
+                user_id = parts[0]
+                email = parts[1]
+                
+                # Get user from database to verify
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute("SELECT id, name FROM users WHERE id = %s AND email = %s", (user_id, email))
+                user = cursor.fetchone()
+                cursor.close()
+                conn.close()
+                
+                if user:
+                    user_id, name = user
+                    return jsonify({
+                        'logged_in': True, 
+                        'user': {
+                            'id': user_id,
+                            'name': name,
+                            'email': email
+                        }
+                    })
+        except Exception as e:
+            app.logger.error(f"Session validation error: {str(e)}")
+    
+    # If no token or validation failed
+    return jsonify({'logged_in': False})
 
 @app.route('/contact-message', methods=['POST'])
 def contact_message():
